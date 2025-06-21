@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
@@ -80,9 +80,27 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
       } else {
         const loginValues = values as LoginFormValues;
-        await signInWithEmailAndPassword(auth, loginValues.email, loginValues.password);
+        const userCredential = await signInWithEmailAndPassword(auth, loginValues.email, loginValues.password);
+        const user = userCredential.user;
+
+        // Fetch user profile to determine role for redirection
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+        
         toast({ title: "Logged in successfully!" });
-        router.push('/');
+        
+        if (userDoc.exists()) {
+          const userProfile = userDoc.data();
+          if (userProfile.role === 'driver') {
+            router.push('/driver/dashboard');
+          } else {
+            router.push('/client/dashboard');
+          }
+        } else {
+            // Fallback if profile doesn't exist, though it should.
+            // Redirecting to home is safe, useAuth will figure out the state.
+            router.push('/'); 
+        }
       }
     } catch (error: any) {
       console.error(`${mode} error:`, error);
