@@ -1,38 +1,42 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the requesting user is the owner of a document
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
     
-    // Helper function to get a user's role from the 'users' collection
     function getUserRole(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
 
-    // Users can create their own user document on signup.
-    // They can only read and update their own document.
     match /users/{userId} {
       allow read, update: if isOwner(userId);
       allow create: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Driver profiles can be read by anyone.
-    // They can only be created or updated by a user with the 'driver' role who is the owner.
     match /driverProfiles/{driverId} {
+      // Anyone can read driver profiles (for the main page)
       allow read: if true;
+      // Only the owner who is a driver can write to their profile.
       allow create, update: if isOwner(driverId) && getUserRole(driverId) == 'driver';
     }
 
-    // Bookings can be created by a client for themselves.
-    // They can be read or updated by the client who owns it or the driver assigned to it.
-    // Deletion is restricted to the client.
     match /bookings/{bookingId} {
       allow create: if isOwner(request.resource.data.clientId) && getUserRole(request.resource.data.clientId) == 'client';
-      allow read, update: if isOwner(resource.data.clientId) || isOwner(resource.data.driverId);
+      
+      // Allow any logged-in user to read booking data.
+      // This is necessary for the homepage calendar to check for available time slots.
+      // WARNING: This makes all booking details (client name, phone, etc.) visible to any logged-in user.
+      // For a production app, this should be replaced with a more secure solution like a separate "availability" collection.
+      allow read: if request.auth.uid != null;
+      
+      // A client or driver can update their own bookings.
+      allow update: if isOwner(resource.data.clientId) || isOwner(resource.data.driverId);
+                       
+      // A client can delete their own booking.
       allow delete: if isOwner(resource.data.clientId);
     }
   }
