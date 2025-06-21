@@ -1,0 +1,37 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if the requesting user is the owner of a document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Helper function to get a user's role from the 'users' collection
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+
+    // Users can create their own user document on signup.
+    // They can only read and update their own document.
+    match /users/{userId} {
+      allow read, update: if isOwner(userId);
+      allow create: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Driver profiles can be read by anyone.
+    // They can only be created or updated by a user with the 'driver' role who is the owner.
+    match /driverProfiles/{driverId} {
+      allow read: if true;
+      allow create, update: if isOwner(driverId) && getUserRole(driverId) == 'driver';
+    }
+
+    // Bookings can be created by a client for themselves.
+    // They can be read or updated by the client who owns it or the driver assigned to it.
+    match /bookings/{bookingId} {
+      allow create: if isOwner(request.resource.data.clientId) && getUserRole(request.resource.data.clientId) == 'client';
+      allow read, update: if isOwner(resource.data.clientId) || isOwner(resource.data.driverId);
+    }
+  }
+}
