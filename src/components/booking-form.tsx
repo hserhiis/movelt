@@ -88,11 +88,6 @@ export function BookingForm({ selectedDate, selectedTime, driverId, onBookingSuc
         createdAt: Timestamp.now(),
         status: 'pending',
       });
-
-      toast({
-        title: "Booking Confirmed!",
-        description: `Your transport for ${format(selectedDate, 'MMMM do')} at ${format(selectedTime, 'p')} is scheduled.`,
-      });
       
       form.reset();
       onBookingSuccess();

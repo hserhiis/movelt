@@ -7,6 +7,7 @@ import { collection, query, where, onSnapshot, doc, updateDoc, Timestamp } from 
 import { db } from '@/lib/firebase';
 import type { Booking } from '@/lib/types';
 import { format } from 'date-fns';
+import Link from 'next/link';
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,7 +25,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Clock, Package, XCircle, Ban } from 'lucide-react';
+import { Calendar, Clock, Package, XCircle, Ban, PlusCircle } from 'lucide-react';
 
 export default function ClientDashboard() {
   const { userProfile, isLoading: isAuthLoading } = useAuth();
@@ -104,8 +105,15 @@ export default function ClientDashboard() {
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-      <h1 className="text-3xl font-bold text-primary font-headline">My Dashboard</h1>
-      <p className="mt-2 text-muted-foreground">Here you can view and manage your bookings.</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-primary font-headline">My Dashboard</h1>
+          <p className="mt-2 text-muted-foreground">Here you can view and manage your bookings.</p>
+        </div>
+        <Link href="/client/book">
+            <Button size="lg"><PlusCircle className="mr-2 h-5 w-5"/> New Booking</Button>
+        </Link>
+      </div>
       
        <div className="mt-8">
         <h2 className="text-2xl font-semibold font-headline mb-4">My Bookings</h2>
@@ -176,7 +184,7 @@ export default function ClientDashboard() {
               <h3 className="text-xl font-semibold">No bookings yet!</h3>
               <p className="text-muted-foreground mt-2">Ready to schedule your move?</p>
               <Button asChild className="mt-4">
-                <a href="/">Book Now</a>
+                <Link href="/client/book">Book Now</Link>
               </Button>
             </CardContent>
           </Card>
