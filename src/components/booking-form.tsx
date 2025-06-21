@@ -8,6 +8,7 @@ import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format, addHours } from 'date-fns';
 import { BOOKING_DURATION_HOURS } from '@/lib/time';
+import { useAuth } from '@/hooks/use-auth';
 
 import { Button } from "@/components/ui/button";
 import { Input } from '@/components/ui/input';
@@ -31,33 +32,46 @@ type BookingFormValues = z.infer<typeof formSchema>;
 interface BookingFormProps {
   selectedDate: Date;
   selectedTime: Date;
+  driverId: string;
   onBookingSuccess: () => void;
 }
 
-export function BookingForm({ selectedDate, selectedTime, onBookingSuccess }: BookingFormProps) {
+export function BookingForm({ selectedDate, selectedTime, driverId, onBookingSuccess }: BookingFormProps) {
   const { toast } = useToast();
+  const { userProfile } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       vehicleVolume: undefined,
-      name: '',
-      phone: '',
-      email: '',
+      name: userProfile?.name || '',
+      phone: userProfile?.phone || '',
+      email: userProfile?.email || '',
       comments: '',
     },
   });
 
   const onSubmit = async (values: BookingFormValues) => {
+    if (!userProfile) {
+        toast({
+            variant: "destructive",
+            title: "Not Authenticated",
+            description: "You must be logged in to create a booking.",
+        });
+        return;
+    }
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, 'bookings'), {
         ...values,
+        clientId: userProfile.uid,
+        driverId: driverId,
         date: format(selectedDate, 'yyyy-MM-dd'),
         startTime: format(selectedTime, 'HH:mm'),
         endTime: format(addHours(selectedTime, BOOKING_DURATION_HOURS), 'HH:mm'),
         createdAt: Timestamp.now(),
+        status: 'pending',
       });
 
       toast({
@@ -173,7 +187,7 @@ export function BookingForm({ selectedDate, selectedTime, onBookingSuccess }: Bo
               )}
             />
 
-            <Button type="submit" className="w-full text-lg py-6" disabled={isSubmitting}>
+            <Button type="submit" className="w-full text-lg py-6" disabled={isSubmitting || !userProfile}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

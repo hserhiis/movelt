@@ -1,7 +1,17 @@
 import type { Timestamp } from "firebase/firestore";
 
+export interface UserProfile {
+  uid: string;
+  email: string;
+  role: 'client' | 'driver';
+  name?: string;
+  phone?: string;
+}
+
 export interface Booking {
   id?: string;
+  clientId: string;
+  driverId: string;
   date: string; // YYYY-MM-DD
   startTime: string; // HH:mm
   endTime: string; // HH:mm
@@ -11,4 +21,14 @@ export interface Booking {
   email?: string;
   comments?: string;
   createdAt: Timestamp;
+  status: 'pending' | 'in-transit' | 'completed' | 'cancelled';
+}
+
+export interface DriverProfile {
+    uid: string;
+    name: string;
+    logoUrl?: string;
+    about: string;
+    contactEmail: string;
+    contactPhone: string;
 }
