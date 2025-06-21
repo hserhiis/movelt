@@ -23,8 +23,12 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters.'),
 });
 
-const signupSchema = loginSchema.extend({
+const signupSchema = z.object({
+    email: z.string().email('Invalid email address.'),
+    password: z.string().min(6, 'Password must be at least 6 characters.'),
     role: z.enum(['client', 'driver'], { required_error: 'Please select a role.' }),
+    name: z.string().min(2, 'Name must be at least 2 characters.'),
+    phone: z.string().min(10, 'Phone number must be at least 10 digits.'),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -45,7 +49,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
     defaultValues: {
       email: '',
       password: '',
-      ...(mode === 'signup' && { role: 'client' }),
+      ...(mode === 'signup' && { role: 'client', name: '', phone: '' }),
     },
   });
 
@@ -62,15 +66,17 @@ export default function AuthForm({ mode }: AuthFormProps) {
           uid: user.uid,
           email: user.email,
           role: signupValues.role,
+          name: signupValues.name,
+          phone: signupValues.phone,
         });
 
         if(signupValues.role === 'driver') {
             await setDoc(doc(db, 'driverProfiles', user.uid), {
                 uid: user.uid,
-                name: "New Driver",
-                about: "Welcome to my page! You can edit this information in your dashboard.",
+                name: signupValues.name,
+                about: `Welcome to the page for ${signupValues.name}! You can edit this information in your dashboard.`,
                 contactEmail: user.email,
-                contactPhone: "",
+                contactPhone: signupValues.phone,
                 logoUrl: ""
             })
         }
@@ -97,8 +103,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
             router.push('/client/dashboard');
           }
         } else {
-            // Fallback if profile doesn't exist, though it should.
-            // Redirecting to home is safe, useAuth will figure out the state.
             router.push('/'); 
         }
       }
@@ -123,6 +127,21 @@ export default function AuthForm({ mode }: AuthFormProps) {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+             {mode === 'signup' && (
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             <FormField
               control={form.control}
               name="email"
@@ -136,6 +155,21 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 </FormItem>
               )}
             />
+             {mode === 'signup' && (
+                <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                        <Input placeholder="(123) 456-7890" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            )}
             <FormField
               control={form.control}
               name="password"

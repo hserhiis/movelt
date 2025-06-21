@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -18,25 +17,24 @@ service cloud.firestore {
     }
     
     match /driverProfiles/{driverId} {
-      // Anyone can read driver profiles (for the main page)
       allow read: if true;
-      // Only the owner who is a driver can write to their profile.
       allow create, update: if isOwner(driverId) && getUserRole(driverId) == 'driver';
     }
 
     match /bookings/{bookingId} {
+      // Clients create bookings for themselves
       allow create: if isOwner(request.resource.data.clientId) && getUserRole(request.resource.data.clientId) == 'client';
       
-      // Allow any logged-in user to read booking data.
-      // This is necessary for the homepage calendar to check for available time slots.
-      // WARNING: This makes all booking details (client name, phone, etc.) visible to any logged-in user.
-      // For a production app, this should be replaced with a more secure solution like a separate "availability" collection.
-      allow read: if request.auth.uid != null;
-      
-      // A client or driver can update their own bookings.
-      allow update: if isOwner(resource.data.clientId) || isOwner(resource.data.driverId);
+      // Allow the assigned driver or owning client to read the booking
+      allow read: if isOwner(resource.data.driverId) || isOwner(resource.data.clientId);
                        
-      // A client can delete their own booking.
+      // Allow updates under specific conditions
+      allow update: if 
+        // A client can update their booking ONLY if they are changing the status to 'cancelled'
+        (isOwner(resource.data.clientId) && request.resource.data.status == 'cancelled') || 
+        // A driver can update any part of a booking assigned to them (e.g. changing status)
+        (isOwner(resource.data.driverId));
+                       
       allow delete: if isOwner(resource.data.clientId);
     }
   }

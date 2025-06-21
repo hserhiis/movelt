@@ -21,7 +21,7 @@ import { Loader2, Truck } from 'lucide-react';
 
 const formSchema = z.object({
   vehicleVolume: z.enum(['small', 'medium', 'large'], { required_error: 'Please select a vehicle size.' }),
-  name: z.string().optional(),
+  name: z.string().min(2, "Please enter a contact name."),
   phone: z.string().min(10, 'Phone number must be at least 10 digits.').max(15, 'Phone number seems too long.'),
   email: z.string().email('Invalid email address.').optional().or(z.literal('')),
   comments: z.string().max(500, 'Comments cannot exceed 500 characters.').optional(),
@@ -51,6 +51,20 @@ export function BookingForm({ selectedDate, selectedTime, driverId, onBookingSuc
       comments: '',
     },
   });
+  
+  // Sync form with userProfile when it loads
+  form.watch(({ name, phone, email }) => {
+    if (userProfile && !name && !phone && !email) {
+      form.reset({
+        name: userProfile.name,
+        phone: userProfile.phone,
+        email: userProfile.email,
+        vehicleVolume: form.getValues('vehicleVolume'),
+        comments: form.getValues('comments'),
+      });
+    }
+  });
+
 
   const onSubmit = async (values: BookingFormValues) => {
     if (!userProfile) {
@@ -66,6 +80,7 @@ export function BookingForm({ selectedDate, selectedTime, driverId, onBookingSuc
       await addDoc(collection(db, 'bookings'), {
         ...values,
         clientId: userProfile.uid,
+        clientName: userProfile.name, // Add the client's name from their profile
         driverId: driverId,
         date: format(selectedDate, 'yyyy-MM-dd'),
         startTime: format(selectedTime, 'HH:mm'),
@@ -129,20 +144,6 @@ export function BookingForm({ selectedDate, selectedTime, driverId, onBookingSuc
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone Number (Required)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Your contact number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
@@ -150,7 +151,7 @@ export function BookingForm({ selectedDate, selectedTime, driverId, onBookingSuc
                 name="name"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Name (Optional)</FormLabel>
+                    <FormLabel>Contact Name</FormLabel>
                     <FormControl>
                         <Input placeholder="Your name" {...field} />
                     </FormControl>
@@ -158,21 +159,35 @@ export function BookingForm({ selectedDate, selectedTime, driverId, onBookingSuc
                     </FormItem>
                 )}
                 />
-                <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Email (Optional)</FormLabel>
-                    <FormControl>
-                        <Input type="email" placeholder="For notifications" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
+                 <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Contact Phone</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Your contact number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
                 />
             </div>
 
+            <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Contact Email (Optional)</FormLabel>
+                <FormControl>
+                    <Input type="email" placeholder="For notifications" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+           
             <FormField
               control={form.control}
               name="comments"
